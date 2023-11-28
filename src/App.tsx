@@ -22,21 +22,51 @@ const App = () => {
   const [grades, setGrades] = useState<IGrade[]>([]);
 
   useEffect(() => {
+    // const fetchClassList = async () => {
+    //   try {
+    //     const response = await fetch('https://spark-se-assessment-api.azurewebsites.net/api/classes?BUID=U34768840', {
+    //       headers: {
+    //         'x-functions-key': '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ=='
+    //       }
+    //     });
+    
+    //     if (!response.ok) {
+    //       throw new Error(`HTTP error! status: ${response.status}`);
+    //     }
+    
+    //     const data = await response.json();
+    //     setClassList(data);
+    //   } catch (error) {
+    //     console.error('Error fetching class list:', error);
+    //   }
+    // };    
+    // fetchClassList();
+
     const fetchClassList = async () => {
+      const apiUrl = 'https://spark-se-assessment-api.azurewebsites.net/api/classes';
+      const buid = 'U34768840';
+      const xFunctionsKey = '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ==';
+    
       try {
-        const response = await fetch('https://spark-se-assessment-api.azurewebsites.net/api/classes?BUID=yourBUID', {
+        const response = await fetch(`${apiUrl}?BUID=${buid}`, {
           headers: {
-            'x-functions-key': '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ=='
+            'x-functions-key': xFunctionsKey
           }
         });
+    
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    
         const data = await response.json();
         setClassList(data);
       } catch (error) {
         console.error('Error fetching class list:', error);
       }
     };
-
+    
     fetchClassList();
+
   }, []);
 
   useEffect(() => {
