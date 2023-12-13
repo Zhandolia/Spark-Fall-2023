@@ -1,91 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
-import { Select, MenuItem, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { useEffect, useState } from "react";
+import Grid from "@mui/material/Unstable_Grid2"; // Importing Grid for layout
+import { Select, Typography, MenuItem } from "@mui/material"; // Importing UI components from MUI
+import { BASE_API_URL, GET_DEFAULT_HEADERS, MY_BU_ID } from "./globals"; // Importing global constants
+import { IUniversityClass } from "./types/api_types"; // Importing type definitions
+import { GradeTable } from "./components/GradeTable"; // Importing the GradeTable component
 
-interface IUniversityClass {
-  classId: string;
-  className: string;
-}
+function App() {
+  const [currClassId, setCurrClassId] = useState<string>(""); // State for current class ID
+  const [classList, setClassList] = useState<IUniversityClass[]>([]); // State for list of classes
+  const [isLoading, setIsLoading] = useState<boolean>(false); // State for loading indicator
 
-interface IGrade {
-  studentId: string;
-  studentName: string;
-  classId: string;
-  className: string;
-  semester: string;
-  finalGrade: number;
-}
-
-const App = () => {
-  const [currClassId, setCurrClassId] = useState('');
-  const [classList, setClassList] = useState<IUniversityClass[]>([]);
-  const [grades, setGrades] = useState<IGrade[]>([]);
+  const fetchClassList = async () => { // Function to fetch the list of classes
+    setIsLoading(true); // Setting loading state
+    try {
+      const headers = GET_DEFAULT_HEADERS(); // Getting default headers for API call
+      const response = await fetch( // Making API call to fetch class list
+        `${BASE_API_URL}/class/listBySemester/spring2023?buid=${MY_BU_ID}`, 
+        { headers }
+      );
+      if (response.ok) {
+        const data = await response.json(); // Parsing JSON response
+        setClassList(data); // Setting class list state
+      } else {
+        console.error("Failed to fetch class list.");
+      }
+    } catch (error) {
+      console.error("Error fetching class list:", error);
+    } finally {
+      setIsLoading(false); // Resetting loading state
+    }
+  };
 
   useEffect(() => {
-    // const fetchClassList = async () => {
-    //   try {
-    //     const response = await fetch('https://spark-se-assessment-api.azurewebsites.net/api/classes?BUID=U34768840', {
-    //       headers: {
-    //         'x-functions-key': '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ=='
-    //       }
-    //     });
-    
-    //     if (!response.ok) {
-    //       throw new Error(`HTTP error! status: ${response.status}`);
-    //     }
-    
-    //     const data = await response.json();
-    //     setClassList(data);
-    //   } catch (error) {
-    //     console.error('Error fetching class list:', error);
-    //   }
-    // };    
-    // fetchClassList();
-
-    const fetchClassList = async () => {
-      const apiUrl = 'https://spark-se-assessment-api.azurewebsites.net/api/classes';
-      const buid = 'U34768840';
-      const xFunctionsKey = '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ==';
-    
-      try {
-        const response = await fetch(`${apiUrl}?BUID=${buid}`, {
-          headers: {
-            'x-functions-key': xFunctionsKey
-          }
-        });
-    
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-    
-        const data = await response.json();
-        setClassList(data);
-      } catch (error) {
-        console.error('Error fetching class list:', error);
-      }
-    };
-    
-    fetchClassList();
-
+    fetchClassList(); // Fetching class list on component mount
   }, []);
 
-  useEffect(() => {
-    if (currClassId) {
-      const fetchGrades = async () => {
-        try {
-          const response = await fetch(`https://spark-se-assessment-api.azurewebsites.net/api/grades?classId=${currClassId}&BUID=yourBUID`, {
-            headers: {
-              'x-functions-key': '6se7z2q8WGtkxBlXp_YpU-oPq53Av-y_GSYiKyS_COn6AzFuTjj4BQ=='
-            }
-          });
-          const data = await response.json();
-          setGrades(data);
-        } catch (error) {
-          console.error('Error fetching grades:', error);
-        }
-      };
+  const fetchAssignmentsForClass = async (classID: string) => { // Function to fetch assignments for a class
+    const url = `${BASE_API_URL}/class/listAssignments/${classID}?buid=${MY_BU_ID}`;
+    const headers = GET_DEFAULT_HEADERS();
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        throw new Error(`Error fetching assignments for class ${classID}`);
+      }
+      const assignments = await response.json(); // Parsing JSON response
+      return assignments;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
 
-      fetchGrades();
+  useEffect(() => {
+    const fetchAssignments = async () => { // Fetching assignments when current class ID changes
+      setIsLoading(true);
+      try {
+        if (currClassId) {
+          const assignments = await fetchAssignmentsForClass(currClassId);
+          console.log(assignments); 
+        }
+      } catch (error) {
+        console.error('Error fetching assignments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (currClassId) {
+      fetchAssignments();
     }
   }, [currClassId]);
 
@@ -101,53 +83,35 @@ const App = () => {
           <Typography variant="h4" gutterBottom>
             Select a class
           </Typography>
-          <Select
-            fullWidth
-            value={currClassId}
-            onChange={(e) => setCurrClassId(e.target.value)}
-            label="Class"
-          >
-            {classList.map((c) => (
-              <MenuItem key={c.classId} value={c.classId}>
-                {c.className}
-              </MenuItem>
-            ))}
-          </Select>
+          <div style={{ width: '100%' }}>
+            {isLoading ? (
+              <p>Loading...</p>
+            ) : (
+              <Select
+                fullWidth={true}
+                label="Class"
+                value={currClassId}
+                onChange={(event) => setCurrClassId(event.target.value as string)}
+              >
+                <MenuItem value="">Select a Class</MenuItem>
+                {classList.map((classItem) => (
+                  <MenuItem key={classItem.classId} value={classItem.classId}>
+                    {classItem.title}
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
+          </div>
         </Grid>
         <Grid xs={12} md={8}>
           <Typography variant="h4" gutterBottom>
             Final Grades
           </Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Student ID</TableCell>
-                  <TableCell>Student Name</TableCell>
-                  <TableCell>Class ID</TableCell>
-                  <TableCell>Class Name</TableCell>
-                  <TableCell>Semester</TableCell>
-                  <TableCell>Final Grade</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {grades.map((grade) => (
-                  <TableRow key={grade.studentId}>
-                    <TableCell>{grade.studentId}</TableCell>
-                    <TableCell>{grade.studentName}</TableCell>
-                    <TableCell>{grade.classId}</TableCell>
-                    <TableCell>{grade.className}</TableCell>
-                    <TableCell>{grade.semester}</TableCell>
-                    <TableCell>{grade.finalGrade}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <GradeTable currClassId={currClassId} />
         </Grid>
       </Grid>
     </div>
   );
-};
+}
 
 export default App;
